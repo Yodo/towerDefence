@@ -1,42 +1,34 @@
 #include "Game.h"
+#include "Logger.h"
 #include <SFML\Window\Event.hpp>
+#include <cassert>
 
 
-Game::Game() : m_window(sf::VideoMode(1024,768), "Tower Defence 0.1")
+Game::Game() : m_window(sf::VideoMode(1024, 768), "Tower Defence 0.1"), m_StateManager(Context(m_window))
 {
+	init_states();
+	m_StateManager.pushState(StateManager::ID::MAINMENU);
+}
 
-
+Game::~Game()
+{
 
 }
 
-void Game::processEvents()
+
+void Game::init_states()
 {
-	sf::Event evt;
-
-	while (m_window.pollEvent(evt))
-	{
-		if (evt.type == sf::Event::Closed ||
-		   (evt.type == sf::Event::KeyPressed && evt.key.code == sf::Keyboard::Escape))
-				m_window.close();
-
-	}
+	m_StateManager.registerState<MainMenuState>(StateManager::ID::MAINMENU);
+	m_StateManager.registerState<PauseState>(StateManager::ID::PAUSE);
+	m_StateManager.registerState<GameState>(StateManager::ID::GAME);
 }
-
-void Game::update(const sf::Time& delta)
-{
-//later
-
-}
-
-void Game::render()
-{
-	m_window.clear();
-	m_window.display();
-}
-
 
 void Game::run()
 {
+	assert(!m_StateManager.empty());
+
+	logger::debug() << "Run main loop";
+
 	sf::Clock clk;
 	sf::Time timeElapsed = sf::Time::Zero;
 	sf::Time secPerFrame = sf::seconds(1.f/60); //60 FPS
@@ -45,18 +37,18 @@ void Game::run()
 	while (m_window.isOpen())
 	{
 		redraw = false;
-		processEvents();
+		m_StateManager.getState()->processEvents();
 
 		timeElapsed += clk.restart();
 
 		while (timeElapsed >= secPerFrame)
 		{
 			redraw = true;
-			update(secPerFrame); //fixed fps woot
+			m_StateManager.getState()->update(secPerFrame); //fixed fps woot
 			timeElapsed -= secPerFrame;
 		}
 
 		if (redraw)
-			render();
+			m_StateManager.getState()->render();
 	}
 }
